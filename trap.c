@@ -78,6 +78,23 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
 
+  case T_PGFLT:
+    {
+        extern int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
+        uint va = PGROUNDDOWN(rcr2());
+        char *mem;
+
+        mem = kalloc();
+        if (mem == 0) {
+            panic("out of memory in page fault handler\n");
+        }
+        memset(mem, 0, PGSIZE);
+        if (mappages(myproc()->pgdir, (char *)va, PGSIZE, V2P(mem), PTE_W | PTE_U) < 0) {
+            kfree(mem);
+            panic("mappages error in page fault handler\n");
+        }
+        break;
+    }
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){
